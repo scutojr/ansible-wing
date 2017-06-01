@@ -2,6 +2,8 @@ import json
 
 from flask import Blueprint, request
 
+import inventory.model as model
+
 
 __all__ = [
     'api'
@@ -42,9 +44,10 @@ def dump_inventory(namespace):
     return True
 
 
-@api.route('/groups/create')
+@api.route('/groups/create', methods=['POST'])
 @rsp_json
 def create_group():
+    '''
     payload = {
         'name': 'group_name',
         'hosts': ['h1', 'h2'],
@@ -52,9 +55,20 @@ def create_group():
         },
         'children': ['g1', 'g2']
     }
+    '''
+    if request.is_json():
+        payload = request.get_json()
+    else:
+        payload = json.loads(request.data)
     name = payload['name']
-    if name == 'all':
-        pass
+    if name == 'all' and 'children' in payload:
+        raise Exception('Children is not allowed in group all.')
+    group = model.Group(name=name)
+    group.hosts.extend(payload['hosts'])
+    group.children.extend(payload['children'])
+    group.variables.from_json(payload['variables'])
+    group.save()
+    return True
 
 
 @api.route('/groups/update')
